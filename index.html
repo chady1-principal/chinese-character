@@ -45,6 +45,51 @@
     <!-- 메인 컨텐츠 영역 -->
     <main class="max-w-2xl w-full mx-auto p-4 sm:p-6 my-auto">
 
+        <!-- Gemini API 키 설정 (내 브라우저에만 저장) -->
+        <div id="key-box" class="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-100/70 overflow-hidden">
+            <button id="key-toggle" type="button" aria-expanded="false" aria-controls="key-panel" class="w-full flex items-center justify-between gap-3 px-4 py-3 sm:px-5 text-left hover:bg-amber-200/50 transition">
+                <span class="flex items-center gap-2 text-base sm:text-lg font-bold text-amber-900">
+                    <i class="fa-solid fa-key text-amber-700"></i>
+                    <span>Gemini API 키 설정</span>
+                </span>
+                <span class="flex items-center gap-2">
+                    <span id="key-status" class="text-sm font-semibold bg-white border border-amber-300 text-amber-800 px-3 py-1 rounded-full whitespace-nowrap">키 없음</span>
+                    <span id="key-arrow" class="text-amber-700 text-sm">▼</span>
+                </span>
+            </button>
+
+            <div id="key-panel" class="hidden border-t-2 border-amber-200 bg-white/70 p-4 sm:p-5 space-y-4 text-left">
+                <p class="text-base sm:text-lg text-stone-700 leading-relaxed">
+                    인터넷에서 <strong>새로운 성어를 찾아오려면 내 Gemini API 키</strong>가 필요합니다.<br>
+                    키는 <strong>이 브라우저에만 저장</strong>되고, 다른 사람이나 서버로 보내지지 않습니다.
+                </p>
+
+                <div id="key-note" class="hidden rounded-xl px-4 py-3 text-base font-semibold leading-relaxed"></div>
+
+                <div>
+                    <label for="key-input" class="block text-base sm:text-lg font-semibold text-stone-800 mb-2">Gemini API 키 입력</label>
+                    <input id="key-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"
+                        placeholder="AIza… 또는 AQ.… 로 시작하는 키"
+                        class="w-full text-base sm:text-lg px-4 py-3 rounded-xl border-2 border-amber-300 bg-white focus:outline-none focus:border-amber-500 tracking-wide" />
+                </div>
+
+                <label class="flex items-center gap-2 text-base text-stone-700 cursor-pointer select-none">
+                    <input id="key-show" type="checkbox" class="w-5 h-5 accent-amber-600 rounded" />
+                    <span>입력한 키 보기</span>
+                </label>
+
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button id="key-save" type="button" class="flex-1 bg-amber-700 hover:bg-amber-800 text-white text-lg font-bold py-3 rounded-xl shadow-md transition">키 저장</button>
+                    <button id="key-delete" type="button" class="flex-1 bg-white hover:bg-stone-50 border-2 border-stone-300 text-stone-700 text-lg font-bold py-3 rounded-xl transition">저장된 키 삭제</button>
+                </div>
+
+                <p class="text-sm text-stone-500 leading-relaxed">
+                    키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="text-amber-800 underline font-semibold">구글 AI Studio</a>에서 무료로 만들 수 있습니다.
+                    저장한 키는 이 브라우저를 벗어나지 않으며, 다른 기기와 공유되지 않습니다.
+                </p>
+            </div>
+        </div>
+
         <!-- 로딩 인디케이터 -->
         <div id="loading-spinner" class="hidden flex-col items-center justify-center py-16 bg-white rounded-3xl shadow-xl border border-amber-100 mb-6">
             <i class="fa-solid fa-spinner fa-spin text-4xl text-amber-700 mb-4"></i>
@@ -245,6 +290,150 @@
         const dateString = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
         document.getElementById('current-date').innerText = dateString;
 
+        /* ============================================================
+           Gemini API 키 설정
+           - 키는 이 브라우저의 localStorage에만 저장됩니다.
+           - 코드나 서버 어디에도 키를 넣지 않습니다.
+           ============================================================ */
+        const GEMINI_KEY_STORAGE = 'saja_gemini_key';
+
+        const keyBox = document.getElementById('key-box');
+        const keyToggle = document.getElementById('key-toggle');
+        const keyPanel = document.getElementById('key-panel');
+        const keyArrow = document.getElementById('key-arrow');
+        const keyInput = document.getElementById('key-input');
+        const keyShow = document.getElementById('key-show');
+        const keyStatus = document.getElementById('key-status');
+        const keyNote = document.getElementById('key-note');
+
+        function getGeminiApiKey() {
+            try {
+                return (localStorage.getItem(GEMINI_KEY_STORAGE) || '').trim();
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function maskGeminiKey(key) {
+            if (!key) return '';
+            if (key.length <= 8) return '••••';
+            return key.slice(0, 4) + '••••' + key.slice(-4);
+        }
+
+        function setKeyNote(message, type) {
+            if (!keyNote) return;
+            keyNote.innerText = message;
+            keyNote.className = 'rounded-xl px-4 py-3 text-base font-semibold leading-relaxed ' +
+                (type === 'ok' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-orange-50 border border-orange-200 text-orange-800');
+        }
+
+        function clearKeyNote() {
+            if (!keyNote) return;
+            keyNote.innerText = '';
+            keyNote.className = 'hidden rounded-xl px-4 py-3 text-base font-semibold leading-relaxed';
+        }
+
+        function updateKeyStatus() {
+            const key = getGeminiApiKey();
+            if (key) {
+                keyStatus.innerText = '키 저장됨 ✔';
+                keyStatus.className = 'text-sm font-semibold bg-emerald-50 border border-emerald-300 text-emerald-800 px-3 py-1 rounded-full whitespace-nowrap';
+                keyStatus.title = '저장된 키: ' + maskGeminiKey(key);
+                keyBox.classList.remove('border-amber-300');
+                keyBox.classList.add('border-emerald-300');
+            } else {
+                keyStatus.innerText = '키 없음';
+                keyStatus.className = 'text-sm font-semibold bg-white border border-amber-300 text-amber-800 px-3 py-1 rounded-full whitespace-nowrap';
+                keyStatus.title = 'Gemini API 키를 입력해 주세요';
+                keyBox.classList.remove('border-emerald-300');
+                keyBox.classList.add('border-amber-300');
+            }
+        }
+
+        function openKeyPanel(message) {
+            keyPanel.classList.remove('hidden');
+            keyToggle.setAttribute('aria-expanded', 'true');
+            keyArrow.innerText = '▲';
+            if (message) {
+                setKeyNote(message, 'warn');
+            } else {
+                clearKeyNote();
+            }
+            keyBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(function () { keyInput.focus(); }, 250);
+        }
+
+        function closeKeyPanel() {
+            keyPanel.classList.add('hidden');
+            keyToggle.setAttribute('aria-expanded', 'false');
+            keyArrow.innerText = '▼';
+        }
+
+        function toggleKeyPanel() {
+            if (keyPanel.classList.contains('hidden')) {
+                openKeyPanel('');
+            } else {
+                closeKeyPanel();
+            }
+        }
+
+        function saveGeminiKey() {
+            const value = keyInput.value.trim();
+            if (!value) {
+                setKeyNote('키를 입력해 주세요. AI Studio에서 받은 키를 붙여넣으면 됩니다.', 'warn');
+                keyInput.focus();
+                return;
+            }
+            if (/\s/.test(value)) {
+                setKeyNote('키 중간에 빈칸이나 줄바꿈이 들어 있습니다. 키를 다시 확인해 주세요.', 'warn');
+                keyInput.focus();
+                return;
+            }
+            try {
+                localStorage.setItem(GEMINI_KEY_STORAGE, value);
+                keyInput.value = value;
+                updateKeyStatus();
+                setKeyNote('키를 이 브라우저에 저장했습니다. 이제 "새로운 성어 검색"을 사용할 수 있습니다.', 'ok');
+            } catch (e) {
+                setKeyNote('이 브라우저에 키를 저장하지 못했습니다. 시크릿(비공개) 모드에서는 저장이 되지 않을 수 있습니다.', 'warn');
+            }
+        }
+
+        function deleteGeminiKey() {
+            try {
+                localStorage.removeItem(GEMINI_KEY_STORAGE);
+            } catch (e) {
+                // 저장 공간을 쓸 수 없어도 화면 표시는 그대로 진행
+            }
+            keyInput.value = '';
+            updateKeyStatus();
+            setKeyNote('저장된 키를 이 브라우저에서 삭제했습니다.', 'ok');
+        }
+
+        // AI 기능을 누를 때 키가 없으면 안내하고 키 입력창을 열어 준다.
+        function ensureGeminiKey() {
+            if (getGeminiApiKey()) return true;
+            openKeyPanel('먼저 위의 🔑 Gemini API 키 설정에서 내 Gemini API 키를 입력하고 "키 저장"을 눌러 주세요.');
+            return false;
+        }
+
+        keyToggle.addEventListener('click', toggleKeyPanel);
+        document.getElementById('key-save').addEventListener('click', saveGeminiKey);
+        document.getElementById('key-delete').addEventListener('click', deleteGeminiKey);
+        keyInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveGeminiKey();
+            }
+        });
+        keyShow.addEventListener('change', function () {
+            keyInput.type = keyShow.checked ? 'text' : 'password';
+        });
+
+        // 저장된 키가 있으면 입력칸에 채워 둔다(비밀번호 형태로 가려짐).
+        keyInput.value = getGeminiApiKey();
+        updateKeyStatus();
+
         // 화면 렌더링 함수
         function renderCard() {
             if (idioms.length === 0) return;
@@ -300,6 +489,11 @@
 
         // 제미나이 API를 이용해 새로운 사자성어를 인터넷에서 검색 및 생성
         async function fetchNewIdiom() {
+            // 키가 없으면 조용히 넘어가지 않고 키 입력창을 열어 안내한다.
+            if (!ensureGeminiKey()) {
+                return;
+            }
+
             const spinner = document.getElementById('loading-spinner');
             const cardContainer = document.getElementById('card-container');
             
@@ -333,8 +527,8 @@
                     }
                 };
 
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const apiKey = getGeminiApiKey();
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(apiKey)}`;
                 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -343,6 +537,9 @@
                 });
 
                 const result = await response.json();
+                if (response.status === 400 || response.status === 401 || response.status === 403) {
+                    throw new Error('Gemini API 키가 올바르지 않습니다. 위의 🔑 Gemini API 키 설정에서 키를 다시 확인해 주세요.');
+                }
                 const candidate = result.candidates?.[0];
                 if (candidate && candidate.content?.parts?.[0]?.text) {
                     const text = candidate.content.parts[0].text;
@@ -357,7 +554,10 @@
                 }
             } catch (error) {
                 console.error(error);
-                alert("네트워크 오류가 발생했습니다.");
+                const msg = (error && error.message) ? error.message : '';
+                alert(msg.indexOf('Gemini API 키') === 0
+                    ? msg
+                    : '새로운 성어를 가져오지 못했습니다. 인터넷 연결과 Gemini API 키를 확인한 뒤 다시 시도해 주세요.');
             } finally {
                 spinner.classList.remove('flex');
                 spinner.classList.add('hidden');
