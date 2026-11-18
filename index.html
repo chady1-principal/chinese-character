@@ -413,7 +413,7 @@
         // AI 기능을 누를 때 키가 없으면 안내하고 키 입력창을 열어 준다.
         function ensureGeminiKey() {
             if (getGeminiApiKey()) return true;
-            openKeyPanel('먼저 위의 🔑 Gemini API 키 설정에서 내 Gemini API 키를 입력하고 "키 저장"을 눌러 주세요.');
+            openKeyPanel('먼저 위의 "Gemini API 키 설정"에서 내 Gemini API 키를 입력하고 "키 저장"을 눌러 주세요.');
             return false;
         }
 
