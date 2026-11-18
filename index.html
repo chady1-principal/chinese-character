@@ -538,7 +538,7 @@
 
                 const result = await response.json();
                 if (response.status === 400 || response.status === 401 || response.status === 403) {
-                    throw new Error('Gemini API 키가 올바르지 않습니다. 위의 🔑 Gemini API 키 설정에서 키를 다시 확인해 주세요.');
+                    throw new Error('Gemini API 키가 올바르지 않습니다. 위의 "Gemini API 키 설정"에서 키를 다시 확인해 주세요.');
                 }
                 const candidate = result.candidates?.[0];
                 if (candidate && candidate.content?.parts?.[0]?.text) {
@@ -555,9 +555,12 @@
             } catch (error) {
                 console.error(error);
                 const msg = (error && error.message) ? error.message : '';
-                alert(msg.indexOf('Gemini API 키') === 0
-                    ? msg
-                    : '새로운 성어를 가져오지 못했습니다. 인터넷 연결과 Gemini API 키를 확인한 뒤 다시 시도해 주세요.');
+                if (msg.indexOf('Gemini API 키') === 0) {
+                    openKeyPanel('Gemini API 키가 올바르지 않거나 사용할 수 없습니다. 키를 다시 확인해 주세요.');
+                    alert(msg);
+                } else {
+                    alert('새로운 성어를 가져오지 못했습니다. 인터넷 연결과 Gemini API 키를 확인한 뒤 다시 시도해 주세요.');
+                }
             } finally {
                 spinner.classList.remove('flex');
                 spinner.classList.add('hidden');
